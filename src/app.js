@@ -7,7 +7,6 @@ import passport from 'passport';
 import { engine } from 'express-handlebars';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import fs from 'fs';
 import userRouter from '../routes/user.model.js';
 import sessionsRouter from './routes/sessions.router.js';
 import viewsRouter from './routes/views.router.js';
@@ -31,15 +30,9 @@ app.engine('handlebars', engine({
     layoutsDir: path.join(__dirname, 'views', 'layouts')
 }));
 
-// Establece el motor de vistas y la carpeta de vistas
+// Establece el motor de vistas y la carpeta de vistas src/views
 app.set('view engine', 'handlebars');
 app.set('views', path.join(__dirname, 'views'));
-
-// Intenta usar tambien la carpeta views en la raiz como fallback
-const rootViews = path.join(__dirname, '..', '..', 'views');
-if (fs.existsSync(rootViews)) {
-    app.set('views', [path.join(__dirname, 'views'), rootViews]);
-}
 
 // Middlewares para parsear JSON y formularios
 app.use(json());
