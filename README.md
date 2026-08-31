@@ -27,3 +27,13 @@
 - `src/app.js`: conecta a MongoDB y arranca el servidor.
 - `.env.example`: plantilla para la configuración local.
 - `.env`: archivo local con tus valores reales (no se debe versionar).
+
+
+## Update de mi para mi:
+
+- Configuración base Express + Mongoose + dotenv y conexión a MongoDB Atlas con fallback MemoryStore
+- CRUD inicial de usuarios (GET/POST/PUT/DELETE /api/users) 
+- Sistema de Login con Sesiones: sessions.router manual con bcrypt (createHash/isValidPassword), POST /register|/login, GET /current|/logout, + formularios views/login|register.handlebars
+- Middlewares de protección: isAuthenticated / isNotAuthenticated y authorizeRoles("admin") para rutas /profile, /admin
+- Vistas protegidas Handlebars profile/admin/current con layout y manejo API Current JSON vs HTML
+- Migración total a Passport-Local completada · Contraseñas protegidas con bcrypt y autenticación centralizada.
