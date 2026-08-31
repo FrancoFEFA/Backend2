@@ -1,0 +1,13 @@
+<h2>Panel de Administrador</h2>
+
+<p>Ruta protegida por middleware de roles. Solo usuarios con rol <strong>admin</strong> pueden verla.</p>
+
+<div style="background:#fff3cd; padding:15px; border-radius:6px; border:1px solid #ffeaa7;">
+    <p><strong>Bienvenido Admin:</strong> {{user.first_name}} {{user.last_name}}</p>
+    <p><strong>Email:</strong> {{user.email}}</p>
+    <p><strong>Rol verificado:</strong> {{user.role}}</p>
+</div>
+
+<p>Si un usuario con rol "user" intenta entrar acá, el middleware responde con 403 Acceso denegado.</p>
+
+<a href="/profile">Volver al perfil</a>
