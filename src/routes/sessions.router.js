@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import passport from 'passport';
 
-// Crea el router de sesiones migrado a Passport-Local
+// Crea el router de sesiones migrado a Passport con GitHub
 const router = Router();
 
 // Helper para sanitizar el usuario sin exponer el password
@@ -63,6 +63,18 @@ router.post('/login', (req, res, next) => {
         });
     })(req, res, next);
 });
+
+// Ruta GET para iniciar autenticacion con GitHub
+router.get('/github', passport.authenticate('github', { scope: ['user:email'] }));
+
+// Ruta GET callback de GitHub
+router.get('/github/callback',
+    passport.authenticate('github', { failureRedirect: '/login' }),
+    (req, res) => {
+        // Autenticacion exitosa, redirige al perfil
+        return res.redirect('/profile');
+    }
+);
 
 // Ruta GET para obtener el usuario actual desde la sesion Passport
 router.get('/current', (req, res) => {

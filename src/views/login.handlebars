@@ -8,18 +8,24 @@
     <button type="submit">Ingresar</button>
 </form>
 
+<div style="text-align:center; margin: 16px 0; color:#666;">— o —</div>
+
+<a href="/api/sessions/github" style="display:block; width:100%; padding:10px; background:#24292e; color:white; text-align:center; border-radius:4px; text-decoration:none; box-sizing:border-box;">
+    Ingresar con GitHub
+</a>
+
 <p>¿No tenés cuenta? <a href="/register">Registrate acá</a></p>
 
 <div id="msg"></div>
 
 <script>
-    // Captura el submit del formulario de login
+    // Captura el submit del formulario de login local
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const formData = new FormData(e.target);
         const data = Object.fromEntries(formData);
 
-        // Envía las credenciales al endpoint de login
+        // Envía las credenciales al endpoint de login local
         const res = await fetch('/api/sessions/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

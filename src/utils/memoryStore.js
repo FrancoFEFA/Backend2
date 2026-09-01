@@ -19,6 +19,11 @@ export function findMemoryUserById(id) {
     return memoryUsers.find(u => String(u._id) === String(id)) || null;
 }
 
+// Busca un usuario por githubId en memoria
+export function findMemoryUserByGithubId(githubId) {
+    return memoryUsers.find(u => String(u.githubId) === String(githubId)) || null;
+}
+
 // Crea un usuario en memoria
 export function createMemoryUser(data) {
     const newUser = {
@@ -27,6 +32,15 @@ export function createMemoryUser(data) {
     };
     memoryUsers.push(newUser);
     return newUser;
+}
+
+// Actualiza un usuario en memoria por id
+export function updateMemoryUser(id, updates) {
+    const user = findMemoryUserById(id);
+    if (user) {
+        Object.assign(user, updates);
+    }
+    return user;
 }
 
 // Lista todos los usuarios en memoria para debug
