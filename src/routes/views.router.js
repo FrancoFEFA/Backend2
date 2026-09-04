@@ -42,4 +42,9 @@ router.get('/current', isAuthenticated, (req, res) => {
     return res.render('current', { user: plainUser, title: "Sesion Actual" });
 });
 
+// Muestra la interfaz publica para probar el flujo JWT sin estado
+router.get('/jwt', (req, res) => {
+    return res.render('jwt', { title: "Prueba JWT" });
+});
+
 export default router;

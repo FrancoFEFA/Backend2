@@ -9,6 +9,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import userRouter from '../routes/user.model.js';
 import sessionsRouter from './routes/sessions.router.js';
+import authRouter from './routes/auth.router.js';
 import viewsRouter from './routes/views.router.js';
 import { isAuthenticated } from './middlewares/auth.middleware.js';
 import { initializePassport } from './config/passport.config.js';
@@ -97,6 +98,9 @@ app.use('/', viewsRouter);
 
 // Monta las rutas de sesiones bajo /api/sessions
 app.use('/api/sessions', sessionsRouter);
+
+// Monta las rutas JWT sin estado bajo /api/auth
+app.use('/api/auth', authRouter);
 
 // Monta las rutas de usuarios existentes
 app.use('/api/users', userRouter);
