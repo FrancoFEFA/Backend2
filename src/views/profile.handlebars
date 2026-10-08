@@ -12,7 +12,9 @@
 
 <button onclick="logout()">Cerrar Sesión</button>
 
-<p><a href="/admin">Ir al panel Admin (solo admin)</a></p>
+{{#if (eq user.role "admin")}}
+    <p><a href="/admin">Ir al panel Admin</a></p>
+{{/if}}
 
 <script>
     // Ejecuta el logout destruyendo la sesion en el servidor

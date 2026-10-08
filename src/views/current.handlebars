@@ -1,6 +1,6 @@
 <h2>Sesión Actual</h2>
 
-<p>Vista que muestra los datos guardados en <code>req.session.user</code>.</p>
+<p>Vista renderizada con la sesion de Passport. El endpoint JSON equivalente usa la estrategia <code>current</code> (JWT en cookie httpOnly) y devuelve un DTO sin datos sensibles.</p>
 
 <pre style="background:#f0f0f0; padding:15px; border-radius:6px; overflow:auto;">{{user.first_name}} {{user.last_name}} - {{user.email}} - Rol: {{user.role}}</pre>
 

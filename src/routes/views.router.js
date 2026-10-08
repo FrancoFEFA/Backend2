@@ -5,8 +5,12 @@ import { authorizeRoles } from '../middlewares/roles.middleware.js';
 // Router encargado de renderizar las vistas con Passport
 const router = Router();
 
-// Redirige la raiz al login
+// Redirige la raiz segun el estado de la sesion: si ya estas logueado te
+// lleva al perfil directo, sino al login.
 router.get('/', (req, res) => {
+    if (req.isAuthenticated && req.isAuthenticated()) {
+        return res.redirect('/profile');
+    }
     return res.redirect('/login');
 });
 
@@ -42,9 +46,15 @@ router.get('/current', isAuthenticated, (req, res) => {
     return res.render('current', { user: plainUser, title: "Sesion Actual" });
 });
 
-// Muestra la interfaz publica para probar el flujo JWT sin estado
-router.get('/jwt', (req, res) => {
-    return res.render('jwt', { title: "Prueba JWT" });
+// Formulario para pedir el mail de recuperacion de contraseña
+router.get('/forgot-password', isNotAuthenticated, (req, res) => {
+    return res.render('forgot-password', { title: "Recuperar contraseña" });
+});
+
+// Formulario de nueva contraseña. El token viaja por query string, lo
+// valida recien el POST a /api/sessions/reset-password.
+router.get('/reset-password', isNotAuthenticated, (req, res) => {
+    return res.render('reset-password', { title: "Restablecer contraseña", token: req.query.token || "" });
 });
 
 export default router;

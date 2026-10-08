@@ -1,21 +1,23 @@
 ﻿import express, { json, urlencoded } from 'express';
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
 import session from 'express-session';
 import MongoStore from 'connect-mongo';
 import passport from 'passport';
+import cookieParser from 'cookie-parser';
 import { engine } from 'express-handlebars';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import userRouter from '../routes/user.model.js';
-import sessionsRouter from './routes/sessions.router.js';
-import authRouter from './routes/auth.router.js';
-import viewsRouter from './routes/views.router.js';
-import { isAuthenticated } from './middlewares/auth.middleware.js';
-import { initializePassport } from './config/passport.config.js';
 
-// Carga las variables de entorno desde el archivo .env
-dotenv.config();
+import { env } from './config/env.js';
+import { initializePassport } from './config/passport.config.js';
+import { authCurrent } from './middlewares/current.middleware.js';
+import { flashMiddleware } from './middlewares/flash.middleware.js';
+import { notFoundHandler, errorHandler } from './middlewares/error.middleware.js';
+
+import sessionsRouter from './routes/sessions.router.js';
+import productsRouter from './routes/products.router.js';
+import cartsRouter from './routes/carts.router.js';
+import viewsRouter from './routes/views.router.js';
 
 // Resuelve __dirname en entorno ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -23,15 +25,16 @@ const __dirname = path.dirname(__filename);
 
 // Crea la aplicacion de Express
 const app = express();
-const PORT = process.env.PORT || 8080;
 
 // Configura el motor de plantillas Handlebars
 app.engine('handlebars', engine({
     defaultLayout: 'main',
-    layoutsDir: path.join(__dirname, 'views', 'layouts')
+    layoutsDir: path.join(__dirname, 'views', 'layouts'),
+    helpers: {
+        // Comparacion generica, usada para mostrar el link de Admin solo si el rol coincide
+        eq: (a, b) => a === b
+    }
 }));
-
-// Establece el motor de vistas y la carpeta de vistas src/views
 app.set('view engine', 'handlebars');
 app.set('views', path.join(__dirname, 'views'));
 
@@ -39,85 +42,81 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(json());
 app.use(urlencoded({ extended: true }));
 
-// Sirve archivos estaticos si existen en public
-app.use(express.static(path.join(__dirname, 'public')));
+// Necesario para leer/escribir la cookie firmada `currentToken` (JWT de
+// la estrategia "current").
+app.use(cookieParser(env.cookieSecret));
 
 // Intenta conectar a MongoDB con timeout corto para fallback rapido
 let dbConnected = false;
-
 try {
-    await mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 3000 });
+    await mongoose.connect(env.mongodbUri, { serverSelectionTimeoutMS: 3000 });
     dbConnected = true;
-    console.log("Conectado a la base de datos");
+    console.log('Conectado a la base de datos');
 } catch (error) {
-    console.log("Advertencia: No se pudo conectar a MongoDB Atlas:", error.message);
-    console.log("Usando almacenamiento en memoria para sesiones. Para produccion verifica IP whitelist en Atlas.");
+    console.log('Advertencia: No se pudo conectar a MongoDB Atlas:', error.message);
+    console.log('Usando almacenamiento en memoria para usuarios. Para produccion verifica IP whitelist en Atlas.');
 }
 
-// Inicializa la configuracion de Passport con estrategias local
+// Inicializa la configuracion de Passport (local, github, current)
 initializePassport();
 
-// Configura el manejo de sesiones con almacenamiento persistente
+// Configura el manejo de sesiones con almacenamiento persistente, usadas
+// por las vistas Handlebars (login/profile/admin/current).
 let sessionStore;
 if (dbConnected) {
-    // Usa MongoStore cuando hay conexion a la base
     sessionStore = MongoStore.create({
-        mongoUrl: process.env.MONGODB_URI,
+        mongoUrl: env.mongodbUri,
         ttl: 60 * 60 * 24,
         collectionName: 'sessions'
     });
-    console.log("Sesiones configuradas con MongoStore persistente");
+    console.log('Sesiones configuradas con MongoStore persistente');
 } else {
-    // Fallback a MemoryStore si no hay conexion
-    console.log("Sesiones configuradas con MemoryStore (no persistente, solo desarrollo)");
+    console.log('Sesiones configuradas con MemoryStore (no persistente, solo desarrollo)');
 }
 
-// Configura el middleware de sesion
 app.use(session({
-    // Almacena las sesiones en Mongo cuando esta disponible, sino en memoria
     ...(sessionStore && { store: sessionStore }),
-    // Clave para firmar la cookie de sesion
-    secret: process.env.SESSION_SECRET || 'coderSecretBackendII',
-    // No guarda sesion si no hay cambios
+    secret: env.sessionSecret,
     resave: false,
-    // No crea sesion vacia hasta que se guarde algo
     saveUninitialized: false,
-    // Configuracion de la cookie de sesion
     cookie: {
         maxAge: 1000 * 60 * 60 * 24,
         httpOnly: true
     }
 }));
 
-// Inicializa Passport y restaura la sesion de autenticacion
 app.use(passport.initialize());
 app.use(passport.session());
+
+// Expone los flash messages (registro/login) en las vistas
+app.use(flashMiddleware);
 
 // Monta las rutas de vistas en la raiz
 app.use('/', viewsRouter);
 
-// Monta las rutas de sesiones bajo /api/sessions
+// API: sesiones (register/login/github/current/logout/recuperar contraseña)
 app.use('/api/sessions', sessionsRouter);
 
-// Monta las rutas JWT sin estado bajo /api/auth
-app.use('/api/auth', authRouter);
+// API: catalogo de productos (lectura publica, mutacion solo admin)
+app.use('/api/products', productsRouter);
 
-// Monta las rutas de usuarios existentes
-app.use('/api/users', userRouter);
+// API: carrito y compra (exclusivo del rol "user")
+app.use('/api/carts', cartsRouter);
 
-// Ruta de health check para verificar que el servidor responde
+// Health check
 app.get('/health', (req, res) => {
-    const sessionUser = req.user || req.session.user || null;
-    res.send({ status: "ok", session: sessionUser, db: dbConnected ? "connected" : "memory-fallback" });
+    res.json({ status: 'ok', db: dbConnected ? 'connected' : 'memory-fallback' });
 });
 
-// Ruta de ejemplo protegida que muestra el uso de middleware de autenticacion
-app.get('/api/protected', isAuthenticated, (req, res) => {
-    const user = req.user || req.session.user;
-    res.send({ status: "success", message: "Acceso a ruta protegida", user });
+// Demo de la estrategia "current" protegiendo una ruta suelta
+app.get('/api/protected', authCurrent, (req, res) => {
+    res.json({ status: 'success', message: 'Acceso a ruta protegida', user: req.user });
 });
 
-// Inicia el servidor en el puerto configurado
-app.listen(PORT, () => {
-    console.log(`Servidor escuchando en el puerto ${PORT}`);
+// 404 y manejo de errores centralizado (siempre al final)
+app.use(notFoundHandler);
+app.use(errorHandler);
+
+app.listen(env.port, () => {
+    console.log(`Servidor escuchando en el puerto ${env.port}`);
 });
