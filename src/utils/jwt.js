@@ -1,27 +1,18 @@
 import jwt from 'jsonwebtoken';
+import { env } from '../config/env.js';
 
-// Obtiene la clave secreta en cada uso para respetar el dotenv cargado en app
-function getSecret() {
-    return process.env.JWT_SECRET || 'jwtSecretBackendII';
-}
-
-// Obtiene la expiracion configurada con valor de una hora por defecto
-function getExpiresIn() {
-    return process.env.JWT_EXPIRES_IN || '1h';
-}
-
-// Genera un token firmado con los datos minimos del usuario
+// Genera el JWT de acceso que se guarda en la cookie httpOnly y que la
+// estrategia Passport "current" valida en cada request.
 export function generateToken(user) {
     const payload = {
         id: user._id,
         email: user.email,
-        role: user.role || 'user'
+        role: user.role || 'user',
     };
 
-    return jwt.sign(payload, getSecret(), { expiresIn: getExpiresIn() });
+    return jwt.sign(payload, env.jwtSecret, { expiresIn: env.jwtExpiresIn });
 }
 
-// Verifica un token y devuelve su contenido si es valido
 export function verifyToken(token) {
-    return jwt.verify(token, getSecret());
+    return jwt.verify(token, env.jwtSecret);
 }
