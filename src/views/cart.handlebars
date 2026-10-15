@@ -1,0 +1,208 @@
+<h2>Mi carrito</h2>
+
+<p class="muted">Ajustá cantidades, quitá productos y confirmá la compra. <a href="/products">Volver al catálogo</a></p>
+
+<div id="msg"></div>
+
+<div id="cartBody"></div>
+
+<div id="ticketBox"></div>
+
+<script>
+    const msgEl = document.getElementById('msg');
+    const cartBody = document.getElementById('cartBody');
+    const ticketBox = document.getElementById('ticketBox');
+
+    let cart = null;
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#39;');
+    }
+
+    function formatPrice(value) {
+        return '$' + Number(value).toLocaleString('es-AR');
+    }
+
+    function showMsg(text, type = 'success') {
+        msgEl.innerHTML = `<div class="alert alert-${type}">${escapeHtml(text)}</div>`;
+    }
+
+    async function requestJson(url, options) {
+        const res = await fetch(url, options);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || 'Ocurrió un error inesperado');
+        return data;
+    }
+
+    // Un producto puede venir null si fue eliminado del catalogo despues
+    // de haberlo agregado; esos items los ignoramos en la vista.
+    function cartItems() {
+        return (cart?.products || []).filter((item) => item.product);
+    }
+
+    async function loadCart() {
+        try {
+            const data = await requestJson('/api/carts');
+            cart = data.payload;
+            renderCart();
+        } catch (error) {
+            showMsg(error.message, 'error');
+        }
+    }
+
+    function renderCart() {
+        const items = cartItems();
+
+        if (items.length === 0) {
+            cartBody.innerHTML = '<p class="muted">Tu carrito está vacío. <a href="/products">Ir al catálogo</a></p>';
+            return;
+        }
+
+        const rows = items.map((item) => {
+            const product = item.product;
+            const subtotal = product.price * item.quantity;
+            return `
+                <tr>
+                    <td>${escapeHtml(product.title)}</td>
+                    <td>${formatPrice(product.price)}</td>
+                    <td><input type="number" min="1" value="${item.quantity}" data-qty="${product._id}" style="width:80px; margin:0;"></td>
+                    <td>${formatPrice(subtotal)}</td>
+                    <td style="white-space:nowrap;">
+                        <button class="btn-inline btn-secondary" data-update="${product._id}">Actualizar</button>
+                        <button class="btn-inline btn-danger" data-remove="${product._id}">Quitar</button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        const total = items.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
+
+        cartBody.innerHTML = `
+            <table>
+                <thead>
+                    <tr><th>Producto</th><th>Precio</th><th>Cantidad</th><th>Subtotal</th><th></th></tr>
+                </thead>
+                <tbody>${rows}</tbody>
+                <tfoot>
+                    <tr><th colspan="3">Total</th><th>${formatPrice(total)}</th><th></th></tr>
+                </tfoot>
+            </table>
+            <div style="display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;">
+                <button class="btn-inline btn-secondary" id="clearCart">Vaciar carrito</button>
+                <button class="btn-inline" id="purchaseBtn">Confirmar compra</button>
+            </div>
+        `;
+
+        bindActions();
+    }
+
+    function bindActions() {
+        cartBody.querySelectorAll('[data-update]').forEach((btn) => {
+            btn.addEventListener('click', () => updateItem(btn.dataset.update));
+        });
+        cartBody.querySelectorAll('[data-remove]').forEach((btn) => {
+            btn.addEventListener('click', () => removeItem(btn.dataset.remove));
+        });
+        document.getElementById('clearCart')?.addEventListener('click', clearCart);
+        document.getElementById('purchaseBtn')?.addEventListener('click', purchase);
+    }
+
+    async function updateItem(productId) {
+        const input = cartBody.querySelector(`[data-qty="${productId}"]`);
+        const quantity = Number(input?.value);
+        try {
+            const data = await requestJson(`/api/carts/product/${productId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ quantity }),
+            });
+            cart = data.payload;
+            renderCart();
+            showMsg('Cantidad actualizada', 'success');
+        } catch (error) {
+            showMsg(error.message, 'error');
+        }
+    }
+
+    async function removeItem(productId) {
+        try {
+            const data = await requestJson(`/api/carts/product/${productId}`, { method: 'DELETE' });
+            cart = data.payload;
+            renderCart();
+            showMsg('Producto quitado del carrito', 'success');
+        } catch (error) {
+            showMsg(error.message, 'error');
+        }
+    }
+
+    async function clearCart() {
+        if (!confirm('¿Vaciar el carrito? Se quitarán todos los productos.')) return;
+        try {
+            await requestJson('/api/carts', { method: 'DELETE' });
+            await loadCart();
+            showMsg('Carrito vaciado', 'success');
+        } catch (error) {
+            showMsg(error.message, 'error');
+        }
+    }
+
+    async function purchase() {
+        const btn = document.getElementById('purchaseBtn');
+        if (btn) btn.disabled = true;
+        try {
+            const data = await requestJson('/api/carts/purchase', { method: 'POST' });
+            showMsg(data.message || 'Compra realizada con éxito', 'success');
+            renderTicket(data.payload, data.pendingProducts || []);
+            await loadCart();
+        } catch (error) {
+            showMsg(error.message, 'error');
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    }
+
+    // Muestra el ticket generado por la compra. Si quedaron productos sin
+    // stock, el backend los devuelve en pendingProducts y avisamos aparte.
+    function renderTicket(ticket, pendingProducts) {
+        if (!ticket) {
+            ticketBox.innerHTML = '';
+            return;
+        }
+
+        const rows = (ticket.products || []).map((item) => `
+            <tr>
+                <td>${escapeHtml(item.title)}</td>
+                <td>${formatPrice(item.price)}</td>
+                <td>${item.quantity}</td>
+                <td>${formatPrice(item.price * item.quantity)}</td>
+            </tr>
+        `).join('');
+
+        const pendingNote = pendingProducts.length > 0
+            ? '<p class="alert alert-info">Algunos productos se quedaron sin stock y siguen en tu carrito.</p>'
+            : '';
+
+        ticketBox.innerHTML = `
+            <h3 style="margin-top:28px;">Ticket de compra</h3>
+            <p class="muted">Código: ${escapeHtml(ticket.code)} · ${new Date(ticket.purchase_datetime).toLocaleString('es-AR')}</p>
+            ${pendingNote}
+            <table>
+                <thead>
+                    <tr><th>Producto</th><th>Precio</th><th>Cantidad</th><th>Subtotal</th></tr>
+                </thead>
+                <tbody>${rows}</tbody>
+                <tfoot>
+                    <tr><th colspan="3">Total</th><th>${formatPrice(ticket.amount)}</th></tr>
+                </tfoot>
+            </table>
+        `;
+        ticketBox.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    loadCart();
+</script>

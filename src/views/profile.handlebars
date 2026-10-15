@@ -12,9 +12,16 @@
 
 <button onclick="logout()">Cerrar Sesión</button>
 
-{{#if (eq user.role "admin")}}
-    <p><a href="/admin">Ir al panel Admin</a></p>
-{{/if}}
+<h3>Accesos rápidos</h3>
+<p>
+    <a class="link-btn" href="/products">Ver productos</a>
+    {{#if (eq user.role "user")}}
+        <a class="link-btn secondary" href="/cart">Mi carrito</a>
+    {{/if}}
+    {{#if (eq user.role "admin")}}
+        <a class="link-btn secondary" href="/products">Administrar productos</a>
+    {{/if}}
+</p>
 
 <script>
     // Ejecuta el logout destruyendo la sesion en el servidor

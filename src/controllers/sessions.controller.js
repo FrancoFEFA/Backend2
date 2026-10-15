@@ -69,10 +69,10 @@ const sessionsController = {
     },
 
     // Callback de exito de GitHub: ya paso por passport.authenticate('github')
-    // en el router, aca solo falta emitir la cookie JWT y redirigir.
+    // en el router, aca solo falta emitir la cookie JWT y redirigir al inicio.
     githubCallbackSuccess(req, res) {
         issueCurrentCookie(res, req.user);
-        return res.redirect('/profile');
+        return res.redirect('/home');
     },
 
     // GET /api/sessions/current: protegido por la estrategia "current".

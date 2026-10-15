@@ -18,7 +18,7 @@ export function isAuthenticated(req, res, next) {
 // Verifica que el usuario NO este autenticado para acceder a login/register
 export function isNotAuthenticated(req, res, next) {
     if (req.isAuthenticated && req.isAuthenticated()) {
-        return res.redirect('/profile');
+        return res.redirect('/home');
     }
     return next();
 }

@@ -1,0 +1,39 @@
+<h2>Hola, {{user.first_name}} 👋</h2>
+
+<p>Este es el panel del proyecto. Elegí por dónde querés seguir según tu rol.</p>
+
+<div class="cards">
+    <a class="card" href="/products">
+        <h3>Catálogo de productos</h3>
+        <p>Mirá todos los productos disponibles.
+            {{#if (eq user.role "user")}}Agregá los que quieras a tu carrito.{{/if}}</p>
+    </a>
+
+    {{#if (eq user.role "user")}}
+        <a class="card" href="/cart">
+            <h3>Mi carrito</h3>
+            <p>Revisá los productos que elegiste, ajustá cantidades y confirmá la compra.</p>
+        </a>
+    {{/if}}
+
+    {{#if (eq user.role "admin")}}
+        <a class="card" href="/products">
+            <h3>Administrar productos</h3>
+            <p>Creá, editá y eliminá productos del catálogo.</p>
+        </a>
+        <a class="card" href="/admin">
+            <h3>Panel de administración</h3>
+            <p>Resumen de tu cuenta con rol administrador.</p>
+        </a>
+    {{/if}}
+
+    <div class="card disabled">
+        <h3>Historial de compras</h3>
+        <p>Próximamente: vas a poder ver tus tickets anteriores acá.</p>
+    </div>
+
+    <a class="card" href="/profile">
+        <h3>Mi perfil</h3>
+        <p>Tus datos de cuenta y sesión actual.</p>
+    </a>
+</div>

@@ -1,0 +1,266 @@
+<h2>Catálogo de productos</h2>
+
+{{#if (eq user.role "admin")}}
+    <p class="muted">Como administrador podés crear, editar y eliminar productos del catálogo.</p>
+{{else}}
+    <p class="muted">Elegí la cantidad y agregá productos a tu carrito. Después confirmá la compra desde <a href="/cart">Mi carrito</a>.</p>
+{{/if}}
+
+<div id="msg"></div>
+
+{{#if (eq user.role "admin")}}
+    <section style="background:#f7f7f7; padding:18px; border-radius:8px;">
+        <h3 id="formTitle" style="margin-top:0;">Agregar producto</h3>
+        <form id="productForm" class="form-grid">
+            <div>
+                <label class="muted" for="title">Título</label>
+                <input type="text" id="title" name="title" placeholder="Ej: Zapatillas running" required>
+            </div>
+            <div>
+                <label class="muted" for="code">Código</label>
+                <input type="text" id="code" name="code" placeholder="Ej: ZAP-001" required>
+            </div>
+            <div>
+                <label class="muted" for="category">Categoría</label>
+                <input type="text" id="category" name="category" placeholder="Ej: Calzado" required>
+            </div>
+            <div>
+                <label class="muted" for="price">Precio</label>
+                <input type="number" id="price" name="price" min="0" step="0.01" placeholder="0" required>
+            </div>
+            <div>
+                <label class="muted" for="stock">Stock</label>
+                <input type="number" id="stock" name="stock" min="0" placeholder="0" required>
+            </div>
+            <div>
+                <label class="muted" for="thumbnails">Miniaturas (separadas por coma)</label>
+                <input type="text" id="thumbnails" name="thumbnails" placeholder="https://... , https://...">
+            </div>
+            <div style="grid-column: 1 / -1;">
+                <label class="muted" for="description">Descripción</label>
+                <input type="text" id="description" name="description" placeholder="Breve descripción del producto" required>
+            </div>
+            <div style="grid-column: 1 / -1; display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" id="status" name="status" checked style="width:auto; margin:0;">
+                <label for="status" class="muted">Producto activo</label>
+            </div>
+            <div style="grid-column: 1 / -1; display:flex; gap:8px;">
+                <button type="submit" class="btn-inline" id="submitBtn">Crear producto</button>
+                <button type="button" class="btn-inline btn-secondary" id="cancelEdit" style="display:none;">Cancelar edición</button>
+            </div>
+        </form>
+    </section>
+{{/if}}
+
+<div id="catalog" data-role="{{user.role}}">
+    <div id="productsList" class="product-grid"></div>
+</div>
+
+<script>
+    const catalog = document.getElementById('catalog');
+    const role = catalog.dataset.role;
+    const listEl = document.getElementById('productsList');
+    const msgEl = document.getElementById('msg');
+    const form = document.getElementById('productForm');
+
+    // Cache de los productos cargados, lo usa el admin al editar
+    let productsCache = [];
+    // Id del producto en edicion (null cuando el formulario esta en modo alta)
+    let editingId = null;
+
+    // Escapa caracteres para no inyectar HTML desde los datos del producto
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#39;');
+    }
+
+    function formatPrice(value) {
+        return '$' + Number(value).toLocaleString('es-AR');
+    }
+
+    function showMsg(text, type = 'success') {
+        msgEl.innerHTML = `<div class="alert alert-${type}">${escapeHtml(text)}</div>`;
+    }
+
+    // Envuelve fetch: parsea JSON y lanza un Error con el mensaje de la API
+    async function requestJson(url, options) {
+        const res = await fetch(url, options);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || 'Ocurrió un error inesperado');
+        return data;
+    }
+
+    async function loadProducts() {
+        try {
+            const data = await requestJson('/api/products');
+            productsCache = data.payload || [];
+            renderProducts();
+        } catch (error) {
+            showMsg(error.message, 'error');
+        }
+    }
+
+    function renderProducts() {
+        if (productsCache.length === 0) {
+            listEl.innerHTML = '<p class="muted">Todavía no hay productos cargados.</p>';
+            return;
+        }
+        listEl.innerHTML = productsCache.map(renderCard).join('');
+        bindActions();
+    }
+
+    function renderCard(product) {
+        const inStock = product.stock > 0;
+        const stockBadge = inStock
+            ? `<span class="badge badge-ok">Stock: ${product.stock}</span>`
+            : '<span class="badge badge-off">Sin stock</span>';
+        const statusBadge = product.status
+            ? '<span class="badge badge-ok">Activo</span>'
+            : '<span class="badge badge-off">Inactivo</span>';
+
+        // El admin ve acciones de CRUD; el usuario comun, agregar al carrito
+        const actions = role === 'admin'
+            ? `<div class="actions">
+                   <button class="btn-inline" data-edit="${product._id}">Editar</button>
+                   <button class="btn-inline btn-danger" data-delete="${product._id}">Eliminar</button>
+               </div>`
+            : `<div class="actions">
+                   <input type="number" min="1" value="1" data-qty="${product._id}" ${inStock ? '' : 'disabled'}>
+                   <button class="btn-inline" data-add="${product._id}" ${inStock ? '' : 'disabled'}>Agregar</button>
+               </div>`;
+
+        return `
+            <div class="product-card" data-id="${product._id}">
+                <h3>${escapeHtml(product.title)}</h3>
+                <p class="meta">${escapeHtml(product.description)}</p>
+                <p class="meta">Código: ${escapeHtml(product.code)} · Categoría: ${escapeHtml(product.category)}</p>
+                <p class="price">${formatPrice(product.price)}</p>
+                <p>${stockBadge} ${statusBadge}</p>
+                ${actions}
+            </div>
+        `;
+    }
+
+    function bindActions() {
+        listEl.querySelectorAll('[data-add]').forEach((btn) => {
+            btn.addEventListener('click', () => addToCart(btn.dataset.add));
+        });
+        listEl.querySelectorAll('[data-edit]').forEach((btn) => {
+            btn.addEventListener('click', () => startEdit(btn.dataset.edit));
+        });
+        listEl.querySelectorAll('[data-delete]').forEach((btn) => {
+            btn.addEventListener('click', () => removeProduct(btn.dataset.delete));
+        });
+    }
+
+    async function addToCart(productId) {
+        const qtyInput = listEl.querySelector(`[data-qty="${productId}"]`);
+        const quantity = Number(qtyInput?.value) || 1;
+        try {
+            await requestJson(`/api/carts/product/${productId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ quantity }),
+            });
+            showMsg('Producto agregado al carrito. Podés verlo en "Mi carrito".', 'success');
+        } catch (error) {
+            showMsg(error.message, 'error');
+        }
+    }
+
+    async function removeProduct(productId) {
+        if (!confirm('¿Eliminar este producto del catálogo?')) return;
+        try {
+            await requestJson(`/api/products/${productId}`, { method: 'DELETE' });
+            if (editingId === productId) resetForm();
+            showMsg('Producto eliminado', 'success');
+            await loadProducts();
+        } catch (error) {
+            showMsg(error.message, 'error');
+        }
+    }
+
+    // Accesos a los campos del formulario por nombre. Evitamos form.title
+    // porque "title" es una propiedad nativa del elemento y no el input.
+    function field(name) {
+        return form.elements.namedItem(name);
+    }
+
+    function startEdit(productId) {
+        const product = productsCache.find((p) => p._id === productId);
+        if (!product) return;
+        editingId = productId;
+        field('title').value = product.title || '';
+        field('code').value = product.code || '';
+        field('category').value = product.category || '';
+        field('price').value = product.price;
+        field('stock').value = product.stock;
+        field('thumbnails').value = (product.thumbnails || []).join(', ');
+        field('description').value = product.description || '';
+        field('status').checked = !!product.status;
+        document.getElementById('formTitle').textContent = 'Editar producto';
+        document.getElementById('submitBtn').textContent = 'Guardar cambios';
+        document.getElementById('cancelEdit').style.display = 'inline-block';
+        form.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function resetForm() {
+        editingId = null;
+        form.reset();
+        field('status').checked = true;
+        document.getElementById('formTitle').textContent = 'Agregar producto';
+        document.getElementById('submitBtn').textContent = 'Crear producto';
+        document.getElementById('cancelEdit').style.display = 'none';
+    }
+
+    // El formulario de alta/edicion solo existe para el rol admin
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const raw = Object.fromEntries(new FormData(form));
+            const payload = {
+                title: raw.title,
+                description: raw.description,
+                code: raw.code,
+                category: raw.category,
+                price: Number(raw.price),
+                stock: Number(raw.stock),
+                status: field('status').checked,
+                thumbnails: raw.thumbnails
+                    ? raw.thumbnails.split(',').map((s) => s.trim()).filter(Boolean)
+                    : [],
+            };
+
+            try {
+                if (editingId) {
+                    await requestJson(`/api/products/${editingId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                    });
+                    showMsg('Producto actualizado', 'success');
+                    resetForm();
+                } else {
+                    await requestJson('/api/products', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                    });
+                    showMsg('Producto creado', 'success');
+                    resetForm();
+                }
+                await loadProducts();
+            } catch (error) {
+                showMsg(error.message, 'error');
+            }
+        });
+
+        document.getElementById('cancelEdit').addEventListener('click', resetForm);
+    }
+
+    loadProducts();
+</script>

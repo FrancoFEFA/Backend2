@@ -6,11 +6,12 @@
     <title>{{title}} - Backend II</title>
     <style>
         * { box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; padding: 0 20px 40px; background: #f5f5f5; }
+        body { font-family: Arial, sans-serif; max-width: 960px; margin: 0 auto; padding: 0 20px 40px; background: #f5f5f5; color: #222; }
         .container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         input, button { width: 100%; padding: 10px; margin: 8px 0; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; }
         button { background: #007bff; color: white; border: none; cursor: pointer; }
         button:hover { background: #0056b3; }
+        button:disabled { opacity: .6; cursor: not-allowed; }
         a { color: #007bff; text-decoration: none; }
         nav {
             display: flex;
@@ -26,11 +27,58 @@
             top: 0;
         }
         nav .brand { font-weight: bold; color: #222; }
-        nav .nav-links a { margin-left: 15px; }
+        nav .nav-links { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
         nav .nav-links a.logout { color: #c0392b; }
         .alert { padding: 10px; border-radius: 4px; margin: 10px 0; }
         .alert-error { background: #f8d7da; color: #721c24; }
         .alert-success { background: #d4edda; color: #155724; }
+        .alert-info { background: #d1ecf1; color: #0c5460; }
+
+        /* Dashboard con tarjetas de acceso rapido */
+        .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin: 20px 0; }
+        .card { display: block; border: 1px solid #e0e0e0; border-radius: 8px; padding: 18px; background: #fff; color: inherit; transition: box-shadow .15s, transform .15s; }
+        .card:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.12); transform: translateY(-2px); }
+        .card h3 { margin: 0 0 8px; color: #007bff; }
+        .card p { margin: 0; color: #555; font-size: 14px; }
+        .card.disabled { opacity: .6; }
+        .card.disabled:hover { box-shadow: none; transform: none; }
+        .card.disabled h3 { color: #999; }
+
+        .page-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+
+        /* Catalogo en grilla de tarjetas */
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-top: 16px; }
+        .product-card { border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; background: #fff; display: flex; flex-direction: column; gap: 6px; }
+        .product-card h3 { margin: 0; font-size: 18px; }
+        .product-card .meta { color: #666; font-size: 13px; }
+        .product-card .price { font-size: 20px; font-weight: bold; color: #155724; }
+        .product-card .actions { margin-top: 10px; display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+        .product-card .actions input { margin: 0; max-width: 84px; }
+
+        .btn-inline { width: auto; padding: 8px 14px; font-size: 14px; }
+        .btn-secondary { background: #6c757d; }
+        .btn-secondary:hover { background: #565e64; }
+        .btn-danger { background: #dc3545; }
+        .btn-danger:hover { background: #b02a37; }
+
+        /* Mismo look que los botones pero para etiquetas <a> */
+        .link-btn { display: inline-block; width: auto; padding: 8px 14px; border-radius: 4px; background: #007bff; color: #fff; font-size: 14px; }
+        .link-btn:hover { background: #0056b3; color: #fff; }
+        .link-btn.secondary { background: #6c757d; }
+        .link-btn.secondary:hover { background: #565e64; }
+
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: bold; }
+        .badge-ok { background: #d4edda; color: #155724; }
+        .badge-off { background: #f8d7da; color: #721c24; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+        th, td { text-align: left; padding: 10px; border-bottom: 1px solid #e0e0e0; }
+        th { background: #f7f7f7; }
+
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0 12px; }
+        .form-grid input { margin: 6px 0; }
+        .muted { color: #777; }
+        .field-label { display: block; font-size: 13px; color: #555; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -38,11 +86,16 @@
         <a class="brand" href="/">Backend II</a>
         <span class="nav-links">
             {{#if user}}
-                <a href="/profile">Perfil</a>
-                <a href="/current">Sesión actual</a>
+                <a href="/home">Inicio</a>
+                <a href="/products">Productos</a>
+                {{#if (eq user.role "user")}}
+                    <a href="/cart">Carrito</a>
+                {{/if}}
                 {{#if (eq user.role "admin")}}
                     <a href="/admin">Admin</a>
                 {{/if}}
+                <a href="/profile">Perfil</a>
+                <a href="/current">Sesión actual</a>
                 <a class="logout" href="/api/sessions/logout">Cerrar sesión</a>
             {{else}}
                 <a href="/login">Login</a>

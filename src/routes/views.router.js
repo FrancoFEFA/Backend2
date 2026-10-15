@@ -5,11 +5,19 @@ import { authorizeRoles } from '../middlewares/roles.middleware.js';
 // Router encargado de renderizar las vistas con Passport
 const router = Router();
 
+// Convierte el usuario de Passport a objeto plano y le saca el hash de la
+// contraseña antes de pasarlo a las vistas (mismo criterio en todas las rutas).
+function toPlainUser(user) {
+    const plainUser = user?.toObject ? user.toObject() : user;
+    delete plainUser?.password;
+    return plainUser;
+}
+
 // Redirige la raiz segun el estado de la sesion: si ya estas logueado te
-// lleva al perfil directo, sino al login.
+// lleva al panel de inicio, sino al login.
 router.get('/', (req, res) => {
     if (req.isAuthenticated && req.isAuthenticated()) {
-        return res.redirect('/profile');
+        return res.redirect('/home');
     }
     return res.redirect('/login');
 });
@@ -24,26 +32,37 @@ router.get('/register', isNotAuthenticated, (req, res) => {
     return res.render('register', { title: "Registro" });
 });
 
+// Panel de inicio: destino por defecto despues de iniciar sesion. Muestra
+// los accesos disponibles segun el rol del usuario.
+router.get('/home', isAuthenticated, (req, res) => {
+    return res.render('home', { user: toPlainUser(req.user), title: "Inicio" });
+});
+
+// Catalogo de productos. La lectura es publica en la API, pero aca la
+// mostramos dentro del area autenticada para engancharla con el carrito
+// (rol user) y con el CRUD (rol admin).
+router.get('/products', isAuthenticated, (req, res) => {
+    return res.render('products', { user: toPlainUser(req.user), title: "Productos" });
+});
+
+// Carrito: funcionalidad exclusiva del rol "user", igual que en la API.
+router.get('/cart', isAuthenticated, authorizeRoles("user"), (req, res) => {
+    return res.render('cart', { user: toPlainUser(req.user), title: "Mi carrito" });
+});
+
 // Muestra el perfil del usuario autenticado via Passport
 router.get('/profile', isAuthenticated, (req, res) => {
-    // Convierte a objeto plano por si el deserializado es documento y pasa a la vista
-    const plainUser = req.user?.toObject ? req.user.toObject() : req.user;
-    delete plainUser?.password;
-    return res.render('profile', { user: plainUser, title: "Perfil" });
+    return res.render('profile', { user: toPlainUser(req.user), title: "Perfil" });
 });
 
 // Ruta protegida solo para administradores via Passport y roles
 router.get('/admin', isAuthenticated, authorizeRoles("admin"), (req, res) => {
-    const plainUser = req.user?.toObject ? req.user.toObject() : req.user;
-    delete plainUser?.password;
-    return res.render('admin', { user: plainUser, title: "Admin Panel" });
+    return res.render('admin', { user: toPlainUser(req.user), title: "Admin Panel" });
 });
 
 // Ruta protegida que muestra la sesion actual via Passport
 router.get('/current', isAuthenticated, (req, res) => {
-    const plainUser = req.user?.toObject ? req.user.toObject() : req.user;
-    delete plainUser?.password;
-    return res.render('current', { user: plainUser, title: "Sesion Actual" });
+    return res.render('current', { user: toPlainUser(req.user), title: "Sesion Actual" });
 });
 
 // Formulario para pedir el mail de recuperacion de contraseña

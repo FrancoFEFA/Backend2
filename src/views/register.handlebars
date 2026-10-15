@@ -33,10 +33,10 @@
         const result = await res.json();
         const msgDiv = document.getElementById('msg');
 
-        // Si el registro es exitoso redirige al perfil
+        // Si el registro es exitoso redirige al panel de inicio
         if (result.status === 'success') {
             msgDiv.innerHTML = '<p class="alert alert-success">Registro exitoso. Redirigiendo...</p>';
-            setTimeout(() => window.location.href = '/profile', 800);
+            setTimeout(() => window.location.href = '/home', 800);
         } else {
             msgDiv.innerHTML = `<p class="alert alert-error">${result.message}</p>`;
         }
