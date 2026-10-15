@@ -4,8 +4,8 @@ import { RepositoryError } from '../utils/errors.js';
 // Repository: reglas de negocio del catalogo (codigo unico, stock,
 // existencia) sobre el productDao. Los controllers solo hablan con esto.
 const productRepository = {
-    async list(filters = {}) {
-        return productDao.findAll(filters);
+    async list() {
+        return productDao.findAll();
     },
 
     async getById(id) {

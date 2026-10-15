@@ -15,29 +15,10 @@
 
     let cart = null;
 
-    function escapeHtml(value) {
-        return String(value ?? '')
-            .replaceAll('&', '&amp;')
-            .replaceAll('<', '&lt;')
-            .replaceAll('>', '&gt;')
-            .replaceAll('"', '&quot;')
-            .replaceAll("'", '&#39;');
-    }
-
-    function formatPrice(value) {
-        return '$' + Number(value).toLocaleString('es-AR');
-    }
-
-    function showMsg(text, type = 'success') {
-        msgEl.innerHTML = `<div class="alert alert-${type}">${escapeHtml(text)}</div>`;
-    }
-
-    async function requestJson(url, options) {
-        const res = await fetch(url, options);
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.message || 'Ocurrió un error inesperado');
-        return data;
-    }
+    // Helpers compartidos (ver public/js/ui-helpers.js). showMsg se ata al
+    // contenedor de mensajes de esta vista.
+    const { escapeHtml, formatPrice, requestJson } = window.UI;
+    const showMsg = (text, type = 'success') => window.UI.showMsg(msgEl, text, type);
 
     // Un producto puede venir null si fue eliminado del catalogo despues
     // de haberlo agregado; esos items los ignoramos en la vista.

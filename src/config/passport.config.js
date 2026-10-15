@@ -94,7 +94,7 @@ export function initializePassport() {
     ));
 
     // Serializa el usuario guardando solo el id en la sesion (usada por
-    // las vistas Handlebars: login/profile/admin).
+    // las vistas Handlebars: login, home, productos, carrito, perfil, admin).
     passport.serializeUser((user, done) => {
         done(null, user._id);
     });

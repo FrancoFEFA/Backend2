@@ -42,6 +42,9 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(json());
 app.use(urlencoded({ extended: true }));
 
+// Archivos estaticos (por ejemplo los helpers de UI que comparten las vistas)
+app.use(express.static(path.join(__dirname, 'public')));
+
 // Necesario para leer/escribir la cookie firmada `currentToken` (JWT de
 // la estrategia "current").
 app.use(cookieParser(env.cookieSecret));
@@ -61,7 +64,7 @@ try {
 initializePassport();
 
 // Configura el manejo de sesiones con almacenamiento persistente, usadas
-// por las vistas Handlebars (login/profile/admin/current).
+// por las vistas Handlebars (login, home, productos, carrito, perfil, admin).
 let sessionStore;
 if (dbConnected) {
     sessionStore = MongoStore.create({

@@ -3,8 +3,8 @@ import productModel from '../models/product.model.js';
 // DAO: operaciones crudas de Mongoose sobre la coleccion de productos.
 // No valida reglas de negocio (eso es responsabilidad del repository).
 const productDao = {
-    findAll(filter = {}) {
-        return productModel.find(filter);
+    findAll() {
+        return productModel.find({});
     },
 
     findById(id) {
