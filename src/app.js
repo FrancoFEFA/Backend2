@@ -10,7 +10,6 @@ import { fileURLToPath } from 'url';
 
 import { env } from './config/env.js';
 import { initializePassport } from './config/passport.config.js';
-import { authCurrent } from './middlewares/current.middleware.js';
 import { flashMiddleware } from './middlewares/flash.middleware.js';
 import { notFoundHandler, errorHandler } from './middlewares/error.middleware.js';
 
@@ -109,11 +108,6 @@ app.use('/api/carts', cartsRouter);
 // Health check
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', db: dbConnected ? 'connected' : 'memory-fallback' });
-});
-
-// Demo de la estrategia "current" protegiendo una ruta suelta
-app.get('/api/protected', authCurrent, (req, res) => {
-    res.json({ status: 'success', message: 'Acceso a ruta protegida', user: req.user });
 });
 
 // 404 y manejo de errores centralizado (siempre al final)

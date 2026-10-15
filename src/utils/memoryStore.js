@@ -42,8 +42,3 @@ export function updateMemoryUser(id, updates) {
     }
     return user;
 }
-
-// Lista todos los usuarios en memoria para debug
-export function listMemoryUsers() {
-    return memoryUsers;
-}

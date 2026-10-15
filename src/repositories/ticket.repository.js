@@ -7,10 +7,6 @@ const ticketRepository = {
     async create(data) {
         return ticketDao.create(data);
     },
-
-    async getById(id) {
-        return ticketDao.findById(id);
-    },
 };
 
 export default ticketRepository;

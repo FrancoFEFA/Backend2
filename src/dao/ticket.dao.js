@@ -5,10 +5,6 @@ const ticketDao = {
     create(data) {
         return ticketModel.create(data);
     },
-
-    findById(id) {
-        return ticketModel.findById(id);
-    },
 };
 
 export default ticketDao;
